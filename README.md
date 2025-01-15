@@ -29,7 +29,7 @@ git clone https://github.com/yourusername/nft-getgems-parser.git
 cd nft-getgems-parser
 ```
 
-Install the required Python packages
+2. Install the required Python packages
 ```bash
 pip install selenium
 ```
@@ -67,3 +67,7 @@ pip install selenium
 ```bash
 git clone https://github.com/yourusername/nft-getgems-parser.git
 cd nft-getgems-parser
+```
+2. Установите реккомендуемые пакеты
+```bash
+pip install selenium
