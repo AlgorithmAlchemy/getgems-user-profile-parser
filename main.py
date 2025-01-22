@@ -36,7 +36,6 @@ firefox_options.set_preference("general.platform.override", "Win64")  # Подд
 firefox_options.set_preference("network.http.sendRefererHeader", 0)  # Отключаем отправку заголовков Referer
 
 
-# укажите правильный путь!
 gecko_driver_path = r"E:\Path\to\geckodriver.exe"
 service = Service(executable_path=gecko_driver_path)
 
@@ -78,69 +77,50 @@ def process_wallet(wallet_name):
     # Ожидаем, пока страница загрузится
     driver.implicitly_wait(10)
 
-    # Получаем HTML-контент страницы
-    html = driver.page_source
-    cnt = 0
-    time.sleep(0.1)
-    while True:
-        if 'You have no NFTs' in html:
-            # Записываем данные в базу данных SQLite
+    # Проверяем на наличие сообщений "This user has no NFTs." или "This page does not exist."
+    try:
+        no_content_message = WebDriverWait(driver, 5).until(
+            EC.presence_of_element_located(
+                (By.XPATH, "//div[contains(@class, 'LibraryPlaceholder__title') and (text()='This user has no NFTs.' or text()='This page does not exist.')]")
+            )
+        )
+        if no_content_message:
+            message_text = no_content_message.text
+            print(f"Кошелек {wallet_name}: {message_text}. Переходим к следующему.")
+            # Записываем в базу данных соответствующее сообщение
             try:
                 cursors.execute("INSERT INTO wallets (wallet_name, page_content) VALUES (?, ?)",
-                                (wallet_name, 'Not NFT'))
+                                (wallet_name, message_text))
                 conns.commit()
             except sqlite3.IntegrityError:
                 pass
+            return
+    except TimeoutException:
+        # Если сообщения не найдено, продолжаем дальше
+        print(f"Сообщения 'This user has no NFTs.' или 'This page does not exist.' не найдено для кошелька {wallet_name}. Проверяем контейнер...")
 
-            # Место для дальнейшей обработки HTML-контента
-            print(f"Данные для кошелька {wallet_name} успешно записаны.")
-            break
+    try:
+        # Явное ожидание загрузки контейнера с элементами
+        container = WebDriverWait(driver, 5).until(
+            EC.presence_of_element_located((By.CLASS_NAME, "EntityContentContainer"))
+        )
+        grid_items = container.find_elements(By.CLASS_NAME, "NftItemContainer")
+        visible_items = [item for item in grid_items if item.is_displayed()]
+
+        if visible_items:
+            print(f"Найдено {len(visible_items)} видимых элементов для кошелька {wallet_name}.")
+            for item in visible_items:
+                print(item.text.strip() or "Элемент без текста")
+            # Записываем как содержащий NFT
+            cursors.execute("INSERT INTO wallets (wallet_name, page_content) VALUES (?, ?)",
+                            (wallet_name, 'Has NFTs'))
+            conns.commit()
         else:
-            try:
-                # Явное ожидание загрузки контейнера
-                try:
-                    container = WebDriverWait(driver, 0.1).until(
-                        EC.presence_of_element_located((By.CLASS_NAME, "EntityContentContainer"))
-                    )
-                except TimeoutException:
-                    print(f"Не удалось загрузить контейнер для кошелька {wallet_name}.")
-                    return
-
-                # Проверяем, пустой ли контейнер
-                grid_items = container.find_elements(By.CLASS_NAME, "NftItemContainer")
-
-                visible_items = [item for item in grid_items if item.is_displayed()]  # Только видимые элементы
-
-                if len(visible_items) > 0:
-                    # print(f"Контейнер не пустой, найдено {len(visible_items)} видимых элементов")
-                    if len(visible_items) == 30:
-                        print('continue. . .')
-                        time.sleep(5)
-                        continue
-                    print(visible_items)
-                    # Дополнительно можно обрабатывать найденные элементы
-                    for item in visible_items:
-                        if item.text.strip():
-                            # Пример: получаем текст элемента
-                            print(item.text)
-                else:
-                    print("Контейнер пустой")
-            except NoSuchElementException:
-                print("Контейнер не найден")
-                break
-
-            try:
-                # Записываем данные в базу данных SQLite
-                cursors.execute("INSERT INTO wallets (wallet_name, page_content) VALUES (?, ?)",
-                                (wallet_name, '+++ NFT'))
-                conns.commit()
-
-                # Место для дальнейшей обработки HTML-контента
-                print(f"Данные для кошелька {wallet_name} успешно записаны.")
-                break
-            except sqlite3.IntegrityError:
-                break
-                pass
+            print(f"Контейнер для кошелька {wallet_name} пуст.")
+    except TimeoutException:
+        print(f"Контейнер для кошелька {wallet_name} не найден.")
+    except NoSuchElementException:
+        print(f"Ошибка доступа к элементам для кошелька {wallet_name}.")
 
 
 # Читаем файл с именами кошельков и обрабатываем каждую строку
@@ -153,4 +133,3 @@ with open(wallet_file, 'r') as file:
 # Закрываем браузер и соединение с базой данных
 driver.quit()
 conns.close()
-
