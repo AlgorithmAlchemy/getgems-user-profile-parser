@@ -2,7 +2,7 @@
 # NFT Parser for GetGems.io
 ##############################################
 
-[🇬🇧 Read in English](./README.md)
+**Read this in other languages:** [English (README.md)](README.md)
 
 Это проект на Python, который парсит данные пользователей с [GetGems.io](https://getgems.io/) и сохраняет результаты в базу данных SQLite.
 
