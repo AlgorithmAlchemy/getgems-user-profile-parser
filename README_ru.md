@@ -1,6 +1,6 @@
-##############################################
 # NFT Parser for GetGems.io
-##############################################
+
+  `⭐️ Thanks everyone who has starred the project, it means a lot!`
 
 **Read this in other languages:** [English (README.md)](README.md)
 
