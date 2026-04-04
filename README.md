@@ -2,7 +2,6 @@
 
   `⭐️ Thanks everyone who has starred the project, it means a lot!`
 
-**Read this in other languages:** [Русский (README\_ru.md)](README_ru.md)
 
 This is a Python-based project that parses user data from [GetGems.io](https://getgems.io/) and stores the results in a SQLite database.
 
